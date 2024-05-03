@@ -104,9 +104,6 @@ export default function App() {
 					thumbSize={30}
 					onSlidingComplete={(value) => {
 						let floorVal = Math.floor(value);
-						console.log('cpos', currentPosition);
-						console.log(value);
-						console.log('dur ', duration);
 						setCurrentPosition(floorVal);
 						videoRef.current.setStatusAsync({
 							shouldPlay: true,
@@ -145,7 +142,6 @@ export default function App() {
 							}
 							if (status.isPlaying) {
 								// console.log('playing');
-								// console.log(status.positionMillis);
 								setCurrentPosition(status.positionMillis);
 							} else {
 								// console.log('paused');
