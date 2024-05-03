@@ -5,6 +5,15 @@ import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import { Slider } from '@react-native-assets/slider';
 
+/*
+TODO:
+	Zooming
+	Annotation w/ buttons
+	icons for controls
+	formatting wokrs on web, but not mobile
+
+*/
+
 function Color(props) {
 	return (
 		<TouchableOpacity onPress={props.onPress}>
@@ -34,7 +43,6 @@ export default function App() {
 		});
 
 		if (!result.canceled) {
-			console.log(result.assets[0]);
 			setVideo(result.assets[0].uri);
 			setCurrentPosition(0);
 			setPlaybackStatus({});
@@ -45,29 +53,24 @@ export default function App() {
 	const decrement = useCallback(() => {
 		const newTime = currentPosition - (fineControl ? 5 : 30);
 		setCurrentPosition(newTime);
-		// videoRef.current.setStatusAsync({
-		// 	shouldPlay: false,
-		// 	positionMillis: newTime,
-		// 	seekMillisToleranceAfter: 5,
-		// 	seekMillisToleranceBefore: 5,
-		// });
+		videoRef.current.setStatusAsync({
+			shouldPlay: false,
+			positionMillis: newTime,
+			seekMillisToleranceAfter: 5,
+			seekMillisToleranceBefore: 5,
+		});
 	}, [currentPosition, videoRef.current, setCurrentPosition]);
 
 	const increment = useCallback(() => {
 		const newTime = currentPosition + (fineControl ? 5 : 30);
 		setCurrentPosition(newTime);
-		// videoRef.current.setStatusAsync({
-		// 	shouldPlay: false,
-		// 	positionMillis: newTime,
-		// 	seekMillisToleranceAfter: 5,
-		// 	seekMillisToleranceBefore: 5,
-		// });
+		videoRef.current.setStatusAsync({
+			shouldPlay: false,
+			positionMillis: newTime,
+			seekMillisToleranceAfter: 5,
+			seekMillisToleranceBefore: 5,
+		});
 	}, [currentPosition, videoRef.current, setCurrentPosition]);
-
-	// const updateSliderValue = useCallback(
-	// 	,
-	// 	[videoRef.current, currentPosition, setCurrentPosition],
-	// );
 
 	const controlButtons = (
 		<View style={styles.buttons}>
@@ -169,26 +172,8 @@ export default function App() {
 						}}
 					/>
 					<TouchableOpacity style={styles.opacityButton} onPress={increment} />
-
-					<Button
-						title='edit'
-						onPress={() => {
-							setAnnotating(true);
-						}}
-					></Button>
-					{annotating && (
-						<View>
-							<Color
-								color={'blue'}
-								onPress={() => {
-									console.log('bluie');
-								}}
-							/>
-						</View>
-					)}
 				</View>
 			</View>
-
 			{controlButtons}
 		</View>
 	);
@@ -196,11 +181,11 @@ export default function App() {
 
 const styles = StyleSheet.create({
 	container: {
-		height: '100%',
-		width: '100%',
-		justifyContent: 'center',
+		height: '100vh',
+		width: '100vw',
 		backgroundColor: '#ecf0f1',
 		display: 'flex',
+		flexDirection: 'column',
 	},
 	header: {
 		height: 50,
@@ -208,23 +193,25 @@ const styles = StyleSheet.create({
 		backgroundColor: 'brown',
 	},
 	videoWrapper: {
-		height: '100%',
+		flex: 1,
+		display: 'flex',
+		flexDirection: 'column',
 	},
 	progressBar: {
-		paddingTop: 10,
-		paddingBottom: 10,
+		marginTop: 10,
+		marginBottom: 10,
+		height: 50,
 		width: '90%',
 		zIndex: 2,
 		alignSelf: 'center',
 	},
 	video: {
-		width: '99%',
-		height: '90%',
+		flex: 1,
+		width: '100%',
 	},
 	buttons: {
 		width: '100%',
-		position: 'absolute',
-		bottom: 0,
+		height: 50,
 		display: 'flex',
 		flexDirection: 'row',
 	},
