@@ -1,17 +1,23 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Button, StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { useState, useRef } from 'react';
+import {
+	StyleSheet,
+	TouchableOpacity,
+	View,
+	Text,
+	Image,
+	ActivityIndicator,
+} from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
-import { Slider } from '@react-native-assets/slider';
+import Slider from '@react-native-community/slider';
+import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
+import { RootSiblingParent } from 'react-native-root-siblings';
+import Toast from 'react-native-root-toast';
 
 /*
 TODO:
-	Zooming
 	Annotation w/ buttons
-	icons for controls
-	formatting wokrs on web, but not mobile
-
 */
 
 function Color(props) {
@@ -32,9 +38,11 @@ export default function App() {
 	const [duration, setDuration] = useState(0);
 
 	const videoRef = useRef(null);
-	// todo add loading state
+
 	const pickVideo = async () => {
+		let currentVideo = video;
 		setLoading(true);
+		setVideo(null);
 		let result = await ImagePicker.launchImageLibraryAsync({
 			mediaTypes: ImagePicker.MediaTypeOptions.Videos,
 			allowsEditing: true,
@@ -47,159 +55,219 @@ export default function App() {
 			setCurrentPosition(0);
 			setPlaybackStatus({});
 			setDuration(result.assets[0].duration);
+		} else {
+			setVideo(currentVideo);
+			setLoading(false);
 		}
 	};
 
-	const decrement = useCallback(() => {
-		const newTime = currentPosition - (fineControl ? 5 : 30);
-		setCurrentPosition(newTime);
-		videoRef.current.setStatusAsync({
-			shouldPlay: false,
-			positionMillis: newTime,
-			seekMillisToleranceAfter: 5,
-			seekMillisToleranceBefore: 5,
-		});
-	}, [currentPosition, videoRef.current, setCurrentPosition]);
-
-	const increment = useCallback(() => {
-		const newTime = currentPosition + (fineControl ? 5 : 30);
-		setCurrentPosition(newTime);
-		videoRef.current.setStatusAsync({
-			shouldPlay: false,
-			positionMillis: newTime,
-			seekMillisToleranceAfter: 5,
-			seekMillisToleranceBefore: 5,
-		});
-	}, [currentPosition, videoRef.current, setCurrentPosition]);
-
 	const controlButtons = (
 		<View style={styles.buttons}>
-			<Button
+			<TouchableOpacity
 				onPress={() => {
 					pickVideo();
 				}}
-				title='Pick Video'
-			/>
-			<Button
+				style={styles.button}
+			>
+				<Image style={styles.button} source={require('./assets/films.png')} />
+			</TouchableOpacity>
+
+			<TouchableOpacity
 				onPress={() => {
 					setFineControl(!fineControl);
+					let toast = Toast.show(
+						`Switched to ${!fineControl ? 'slow' : 'fast'} step`,
+						{
+							duration: Toast.durations.SHORT,
+						},
+					);
 				}}
-				title={fineControl ? 'Fast Advance' : 'Fine Control'}
-			/>
+				style={styles.button}
+			>
+				<Image
+					style={styles.button}
+					source={
+						fineControl
+							? require('./assets/forward-fast.png')
+							: require('./assets/forward-step.png')
+					}
+				/>
+			</TouchableOpacity>
 		</View>
 	);
 
-	return (
-		<View style={styles.container}>
-			<StatusBar style='auto' />
-			<View style={styles.header} />
-			<View style={styles.videoWrapper}>
-				<Slider
-					style={styles.progressBar}
-					value={currentPosition}
-					minmumValue={0}
-					maximumValue={duration}
-					onSlidingStart={() => {
-						videoRef.current.pauseAsync();
-					}}
-					step={Math.round(Math.abs(duration) / 100)}
-					slideOnTap={true}
-					thumbSize={30}
-					onSlidingComplete={(value) => {
-						let floorVal = Math.floor(value);
-						setCurrentPosition(floorVal);
-						videoRef.current.setStatusAsync({
-							shouldPlay: true,
-							positionMillis: floorVal,
-							seekMillisToleranceAfter: 5,
-							seekMillisToleranceBefore: 5,
-						});
-					}}
-				/>
-				{loading && <Text>Loading...</Text>}
-				<Video
-					ref={videoRef}
-					style={styles.video}
-					source={{
-						uri: video,
-					}}
-					useNativeControls={false}
-					resizeMode={ResizeMode.CONTAIN}
-					isLooping={false}
-					onLoad={() => {
-						videoRef.current.playAsync();
-					}}
-					progressUpdateIntervalMillis={50}
-					onPlaybackStatusUpdate={(status) => {
-						setPlaybackStatus(status);
-						if (!status.isLoaded) {
-							// Update your UI for the unloaded state
-							if (status.error) {
-								console.log(
-									`Encountered a fatal error during playback: ${status.error}`,
-								);
-							}
-						} else {
-							if (status.isLoaded) {
-								setLoading(false);
-							}
-							if (status.isPlaying) {
-								// console.log('playing');
-								setCurrentPosition(status.positionMillis);
-							} else {
-								// console.log('paused');
-							}
-							if (status.isBuffering) {
-								// console.log('buffering');
-							}
-
-							if (status.didJustFinish && !status.isLooping) {
-								// console.log('finsihed');
-							}
-						}
-					}}
-				/>
-				<View style={styles.opacityButtons}>
-					<TouchableOpacity style={styles.opacityButton} onPress={decrement} />
-					<TouchableOpacity
-						style={styles.opacityButton}
-						onPress={() => {
-							if (playbackStatus.isPlaying) {
-								videoRef.current.pauseAsync();
-							} else {
-								videoRef.current.playAsync();
-							}
-						}}
-					/>
-					<TouchableOpacity style={styles.opacityButton} onPress={increment} />
+	if (!video && !loading) {
+		return (
+			<RootSiblingParent>
+				<View style={styles.container}>
+					<StatusBar style='auto' />
+					<View style={styles.header} />
+					<View style={styles.spinnerWrapper}>
+						<Text>Pick a video to get started.</Text>
+					</View>
+					{controlButtons}
+				</View>
+			</RootSiblingParent>
+		);
+	}
+	if (!video && loading) {
+		return (
+			<View style={styles.container}>
+				<StatusBar style='auto' />
+				<View style={styles.header} />
+				<View style={styles.spinnerWrapper}>
+					<ActivityIndicator size={50} color={'brown'} />
 				</View>
 			</View>
-			{controlButtons}
-		</View>
+		);
+	}
+	let step = duration ? Math.round(Math.abs(duration) / 100) : 10;
+
+	return (
+		<RootSiblingParent>
+			<View style={styles.container}>
+				<StatusBar style='auto' />
+				<View style={styles.header} />
+				<View style={styles.videoWrapper}>
+					<Slider
+						style={styles.progressBar}
+						value={currentPosition}
+						minmumValue={0}
+						maximumValue={duration}
+						onSlidingStart={() => {
+							videoRef.current.pauseAsync();
+						}}
+						step={step}
+						tapToSeek={true}
+						thumbSize={30}
+						onSlidingComplete={(value) => {
+							let floorVal = Math.floor(value);
+							setCurrentPosition(floorVal);
+							videoRef.current.setStatusAsync({
+								shouldPlay: true,
+								positionMillis: floorVal,
+								seekMillisToleranceAfter: 5,
+								seekMillisToleranceBefore: 5,
+							});
+						}}
+					/>
+					<ReactNativeZoomableView
+						maxZoom={5}
+						minZoom={1}
+						zoomStep={0.5}
+						initialZoom={1}
+						bindToBorders={true}
+					>
+						<Video
+							ref={videoRef}
+							style={styles.video}
+							source={{
+								uri: video,
+							}}
+							useNativeControls={false}
+							resizeMode={ResizeMode.CONTAIN}
+							isLooping={false}
+							onLoad={() => {
+								videoRef.current.playAsync();
+							}}
+							progressUpdateIntervalMillis={50}
+							onPlaybackStatusUpdate={(status) => {
+								setPlaybackStatus(status);
+								if (!status.isLoaded) {
+									// Update your UI for the unloaded state
+									if (status.error) {
+										console.log(
+											`Encountered a fatal error during playback: ${status.error}`,
+										);
+									}
+								} else {
+									if (status.isLoaded) {
+										setLoading(false);
+									}
+									if (status.isPlaying) {
+										// console.log('playing');
+										setCurrentPosition(status.positionMillis);
+									} else {
+										// console.log('paused');
+									}
+									if (status.isBuffering) {
+										// console.log('buffering');
+									}
+
+									if (status.didJustFinish && !status.isLooping) {
+										// console.log('finsihed');
+									}
+								}
+							}}
+						/>
+
+						<View style={styles.opacityButtons}>
+							<TouchableOpacity
+								style={styles.opacityButton}
+								onPress={() => {
+									const newTime = currentPosition - (fineControl ? 5 : 30);
+									setCurrentPosition(newTime);
+									videoRef.current.setStatusAsync({
+										shouldPlay: false,
+										positionMillis: newTime,
+										seekMillisToleranceAfter: 5,
+										seekMillisToleranceBefore: 5,
+									});
+								}}
+							/>
+							<TouchableOpacity
+								style={styles.opacityButton}
+								onPress={() => {
+									if (playbackStatus.isPlaying) {
+										videoRef.current.pauseAsync();
+									} else {
+										videoRef.current.playAsync();
+									}
+								}}
+							/>
+							<TouchableOpacity
+								style={styles.opacityButton}
+								onPress={() => {
+									const newTime = currentPosition + (fineControl ? 5 : 30);
+									setCurrentPosition(newTime);
+									videoRef.current.setStatusAsync({
+										shouldPlay: false,
+										positionMillis: newTime,
+										seekMillisToleranceAfter: 5,
+										seekMillisToleranceBefore: 5,
+									});
+								}}
+							/>
+						</View>
+					</ReactNativeZoomableView>
+				</View>
+				{controlButtons}
+			</View>
+		</RootSiblingParent>
 	);
 }
 
 const styles = StyleSheet.create({
 	container: {
-		height: '100vh',
-		width: '100vw',
+		height: '100%',
+		width: '100%',
 		backgroundColor: '#ecf0f1',
 		display: 'flex',
 		flexDirection: 'column',
 	},
 	header: {
-		height: 50,
+		height: 30,
 		width: '100%',
 		backgroundColor: 'brown',
 	},
 	videoWrapper: {
-		flex: 1,
+		flexGrow: 1,
 		display: 'flex',
 		flexDirection: 'column',
 	},
 	progressBar: {
-		marginTop: 10,
-		marginBottom: 10,
+		marginTop: 5,
+		marginBottom: 5,
 		height: 50,
 		width: '90%',
 		zIndex: 2,
@@ -214,6 +282,14 @@ const styles = StyleSheet.create({
 		height: 50,
 		display: 'flex',
 		flexDirection: 'row',
+		marginTop: 10,
+		marginBottom: 10,
+		justifyContent: 'space-evenly',
+		alignItems: 'center',
+	},
+	button: {
+		height: 50,
+		width: 50,
 	},
 	opacityButtons: {
 		position: 'absolute',
@@ -227,5 +303,11 @@ const styles = StyleSheet.create({
 		height: '100%',
 		backgroundColor: 'white',
 		opacity: 0.1,
+	},
+	spinnerWrapper: {
+		display: 'flex',
+		flexGrow: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 });
