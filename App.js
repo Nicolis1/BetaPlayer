@@ -14,8 +14,8 @@ import Slider from '@react-native-community/slider';
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
 import { RootSiblingParent } from 'react-native-root-siblings';
 import Toast from 'react-native-root-toast';
-import AnnotationControls from './AnnotationControls';
 import AnnotationLayer from './AnnotationLayer';
+import { useDebounce } from './useDebounce';
 
 export default function App() {
 	const [video, setVideo] = useState(null);
@@ -26,8 +26,17 @@ export default function App() {
 	const [duration, setDuration] = useState(0);
 	const [wasVideoPlaying, setWasVideoPlaying] = useState(false);
 	const [annotating, setAnnotating] = useState(false);
-	const [annotationColor, setAnnotationColor] = useState('red');
-	const [annotationKeyShift, setAnnotationKeyShift] = useState(0);
+
+	const [showVideoIcons, setShowVideoIcons] = useState({
+		left: false,
+		right: false,
+		playPause: false,
+	});
+
+	const hideVideoIcons = useDebounce(() => {
+		setShowVideoIcons({ left: false, right: false, playPause: false });
+		console.log('here');
+	}, 500);
 
 	const videoRef = useRef(null);
 
@@ -79,6 +88,22 @@ export default function App() {
 						fineControl
 							? require('./assets/forward-fast.png')
 							: require('./assets/forward-step.png')
+					}
+				/>
+			</TouchableOpacity>
+
+			<TouchableOpacity
+				onPress={() => {
+					setAnnotating(!annotating);
+				}}
+				style={styles.button}
+			>
+				<Image
+					style={styles.button}
+					source={
+						annotating
+							? require('./assets/pencil-slash.png')
+							: require('./assets/pencil.png')
 					}
 				/>
 			</TouchableOpacity>
@@ -192,10 +217,7 @@ export default function App() {
 							}}
 						/>
 						{!annotating && (
-							<AnnotationLayer
-								annotationColor={annotationColor}
-								key={`aLayer${annotationKeyShift}`}
-							/>
+							<AnnotationLayer key={'aLayer'} annotating={annotating} />
 						)}
 						<View style={styles.opacityButtons}>
 							<TouchableOpacity
@@ -209,8 +231,21 @@ export default function App() {
 										seekMillisToleranceAfter: 5,
 										seekMillisToleranceBefore: 5,
 									});
+									setShowVideoIcons({
+										right: false,
+										playPause: false,
+										left: true,
+									});
+									hideVideoIcons();
 								}}
-							/>
+							>
+								{showVideoIcons.left && (
+									<Image
+										source={require('./assets/arrow-left-to-line.png')}
+										style={{ height: 40, width: 40, margin: 'auto' }}
+									/>
+								)}
+							</TouchableOpacity>
 							<TouchableOpacity
 								style={styles.opacityButton}
 								onPress={() => {
@@ -219,8 +254,25 @@ export default function App() {
 									} else {
 										videoRef.current.playAsync();
 									}
+									setShowVideoIcons({
+										right: false,
+										left: false,
+										playPause: true,
+									});
+									hideVideoIcons();
 								}}
-							/>
+							>
+								{showVideoIcons.playPause && (
+									<Image
+										source={
+											playbackStatus.isPlaying
+												? require('./assets/caret-right.png')
+												: require('./assets/pause.png')
+										}
+										style={{ height: 40, width: 40, margin: 'auto' }}
+									/>
+								)}
+							</TouchableOpacity>
 							<TouchableOpacity
 								style={styles.opacityButton}
 								onPress={() => {
@@ -232,25 +284,26 @@ export default function App() {
 										seekMillisToleranceAfter: 5,
 										seekMillisToleranceBefore: 5,
 									});
+									setShowVideoIcons({
+										playPause: false,
+										left: false,
+										right: true,
+									});
+									hideVideoIcons();
 								}}
-							/>
+							>
+								{showVideoIcons.right && (
+									<Image
+										source={require('./assets/arrow-right-to-line.png')}
+										style={{ height: 40, width: 40, margin: 'auto' }}
+									/>
+								)}
+							</TouchableOpacity>
 						</View>
 						{annotating && (
-							<AnnotationLayer
-								annotationColor={annotationColor}
-								key={`aLayer${annotationKeyShift}`}
-							/>
+							<AnnotationLayer key={'aLayer'} annotating={annotating} />
 						)}
 					</ReactNativeZoomableView>
-					<AnnotationControls
-						annotating={annotating}
-						setAnnotating={setAnnotating}
-						annotationColor={annotationColor}
-						setAnnotationColor={setAnnotationColor}
-						incrementAnnotationKeyShift={() => {
-							setAnnotationKeyShift(annotationKeyShift + 1);
-						}}
-					/>
 				</View>
 				{controlButtons}
 			</View>
@@ -312,8 +365,8 @@ const styles = StyleSheet.create({
 	opacityButton: {
 		width: '33%',
 		height: '100%',
-		backgroundColor: 'white',
-		opacity: 0.1,
+		// backgroundColor: 'white',
+		// opacity: 0.1,
 	},
 	spinnerWrapper: {
 		display: 'flex',

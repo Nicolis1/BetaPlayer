@@ -18,58 +18,52 @@ function Color(props) {
 }
 
 export default function AnnotationControls(props) {
-	const [annotating, setAnnotating] = useState(props.annotating);
 	const [selectedColor, setSelectedColor] = useState(props.annotationColor);
 
 	return (
-		<Draggable x={10} y={50}>
+		<Draggable x={10} y={40}>
 			<View style={styles.annotationControls}>
 				<Image
 					source={require('./assets/grip.png')}
-					style={{ height: 30, width: 30, margin: 5 }}
+					style={{ height: 40, width: 40, margin: 5 }}
 				/>
-				<TouchableOpacity
-					onPress={() => {
-						setAnnotating(!annotating);
-						props.setAnnotating(!annotating);
-					}}
-				>
-					<Image
-						source={
-							annotating
-								? require('./assets/pencil-slash.png')
-								: require('./assets/pencil.png')
-						}
-						style={{ height: 30, width: 30, margin: 5 }}
-					/>
-				</TouchableOpacity>
-				{annotating && (
-					<>
-						{colors.map((color, index) => {
-							return (
-								<Color
-									key={color}
-									color={color}
-									onPress={() => {
-										setSelectedColor(colors[index]);
-										props.setAnnotationColor(colors[index]);
-									}}
-									selected={selectedColor == colors[index]}
-								/>
-							);
-						})}
-						<TouchableOpacity
-							onPress={() => {
-								props.incrementAnnotationKeyShift();
-							}}
-						>
-							<Image
-								source={require('./assets/rotate-reverse.png')}
-								style={{ height: 30, width: 30, margin: 5 }}
+
+				<>
+					{colors.map((color, index) => {
+						return (
+							<Color
+								key={color}
+								color={color}
+								onPress={() => {
+									setSelectedColor(colors[index]);
+									props.setAnnotationColor(colors[index]);
+								}}
+								selected={selectedColor == colors[index]}
 							/>
-						</TouchableOpacity>
-					</>
-				)}
+						);
+					})}
+					<TouchableOpacity
+						onPress={() => {
+							props.onClear();
+						}}
+					>
+						<Image
+							source={require('./assets/trash.png')}
+							style={{ height: 40, width: 40, margin: 5 }}
+						/>
+					</TouchableOpacity>
+
+					<TouchableOpacity
+						onPress={() => {
+							props.onUndo();
+						}}
+					>
+						<Image
+							source={require('./assets/delete-left.png')}
+							style={{ height: 40, width: 40, margin: 5 }}
+						/>
+					</TouchableOpacity>
+				</>
 			</View>
 		</Draggable>
 	);
@@ -85,9 +79,9 @@ const styles = StyleSheet.create({
 		borderColor: 'black',
 	},
 	colorButton: {
-		height: 30,
-		width: 30,
-		borderRadius: 30,
+		height: 40,
+		width: 40,
+		borderRadius: 40,
 		margin: 5,
 		borderWidth: 5,
 		borderColor: 'white',
