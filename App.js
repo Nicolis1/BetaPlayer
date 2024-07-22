@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
 	StyleSheet,
 	TouchableOpacity,
@@ -14,19 +14,8 @@ import Slider from '@react-native-community/slider';
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
 import { RootSiblingParent } from 'react-native-root-siblings';
 import Toast from 'react-native-root-toast';
-
-/*
-TODO:
-	Annotation w/ buttons
-*/
-
-function Color(props) {
-	return (
-		<TouchableOpacity onPress={props.onPress}>
-			<View style={{ backgroundColor: props.color }}></View>
-		</TouchableOpacity>
-	);
-}
+import AnnotationControls from './AnnotationControls';
+import AnnotationLayer from './AnnotationLayer';
 
 export default function App() {
 	const [video, setVideo] = useState(null);
@@ -34,8 +23,11 @@ export default function App() {
 	const [playbackStatus, setPlaybackStatus] = useState({});
 	const [fineControl, setFineControl] = useState(false);
 	const [loading, setLoading] = useState(false);
-	const [annotating, setAnnotating] = useState(false);
 	const [duration, setDuration] = useState(0);
+	const [wasVideoPlaying, setWasVideoPlaying] = useState(false);
+	const [annotating, setAnnotating] = useState(false);
+	const [annotationColor, setAnnotationColor] = useState('red');
+	const [annotationKeyShift, setAnnotationKeyShift] = useState(0);
 
 	const videoRef = useRef(null);
 
@@ -75,12 +67,9 @@ export default function App() {
 			<TouchableOpacity
 				onPress={() => {
 					setFineControl(!fineControl);
-					let toast = Toast.show(
-						`Switched to ${!fineControl ? 'slow' : 'fast'} step`,
-						{
-							duration: Toast.durations.SHORT,
-						},
-					);
+					Toast.show(`Switched to ${!fineControl ? 'slow' : 'fast'} step`, {
+						duration: Toast.durations.SHORT,
+					});
 				}}
 				style={styles.button}
 			>
@@ -135,6 +124,8 @@ export default function App() {
 						minmumValue={0}
 						maximumValue={duration}
 						onSlidingStart={() => {
+							setWasVideoPlaying(playbackStatus.isPlaying);
+
 							videoRef.current.pauseAsync();
 						}}
 						step={step}
@@ -144,7 +135,7 @@ export default function App() {
 							let floorVal = Math.floor(value);
 							setCurrentPosition(floorVal);
 							videoRef.current.setStatusAsync({
-								shouldPlay: true,
+								shouldPlay: wasVideoPlaying,
 								positionMillis: floorVal,
 								seekMillisToleranceAfter: 5,
 								seekMillisToleranceBefore: 5,
@@ -200,7 +191,12 @@ export default function App() {
 								}
 							}}
 						/>
-
+						{!annotating && (
+							<AnnotationLayer
+								annotationColor={annotationColor}
+								key={`aLayer${annotationKeyShift}`}
+							/>
+						)}
 						<View style={styles.opacityButtons}>
 							<TouchableOpacity
 								style={styles.opacityButton}
@@ -239,7 +235,22 @@ export default function App() {
 								}}
 							/>
 						</View>
+						{annotating && (
+							<AnnotationLayer
+								annotationColor={annotationColor}
+								key={`aLayer${annotationKeyShift}`}
+							/>
+						)}
 					</ReactNativeZoomableView>
+					<AnnotationControls
+						annotating={annotating}
+						setAnnotating={setAnnotating}
+						annotationColor={annotationColor}
+						setAnnotationColor={setAnnotationColor}
+						incrementAnnotationKeyShift={() => {
+							setAnnotationKeyShift(annotationKeyShift + 1);
+						}}
+					/>
 				</View>
 				{controlButtons}
 			</View>
